@@ -60,15 +60,6 @@ module RSpec
 
       attr_reader :controller, :routes
 
-      def method_missing(method, *args, &block)
-        # Send the route helpers to the application router.
-        if @routes && @routes.named_routes.helpers.include?(method)
-          @controller.send(method, *args, &block)
-        else
-          super
-        end
-      end
-
       included do
         metadata[:type] = :cell
         before do # called before every it.
@@ -78,6 +69,28 @@ module RSpec
 
         # we always render views in rspec-cells, so turn it on.
         subject { controller }
+      end
+
+      def method_missing(method, *args, &block)
+        # Send the route helpers to the application router.
+        if route_available?(method)
+          @controller.send(method, *args, &block)
+        else
+          super
+        end
+      end
+
+      private
+
+      # Checks if route is available
+      def route_available?(method)
+        return false if @routes.nil?
+
+        if @routes.named_routes.respond_to?(:route_defined?)
+          @routes.named_routes.route_defined?(method)
+        else
+          @routes.named_routes.helpers.include?(method)
+        end
       end
     end
   end
